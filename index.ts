@@ -1,5 +1,5 @@
-import express from 'express'
 import bodyParser from "body-parser";
+import express from 'express'
 import jwt from 'jsonwebtoken'
 
 const SECRET_KEY = 'secret key';
@@ -10,11 +10,15 @@ const SECRET_KEY = 'secret key';
 const app = express()
 
 /**
- * 회원가입 한 유저의 정보
+ * 회원가입을 한 유저의 정보
  */
-let registryUsers ={
-
+interface IUser {
+	id: string,
+	password: string,
+	name: string
 }
+
+const registryUsers: Map<string, IUser> = new Map()
 
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
@@ -27,15 +31,73 @@ const loginCheck: express.RequestHandler = (req, res,next) => {
 /**
  * 로그인
  */
-app.get('/', (req, res, next) => {
+const loginMessages = {
+	failed: 'login failed',
+	success: 'success'
+}
+app.get('/', (req, res) => {
+	const { id = '', password = '' }: Partial<IUser> = req.query
+	const user = registryUsers.get(id)
 
+	if (!user) {
+		return res.status(401).json({
+			msg: loginMessages.failed
+		})
+	}
+
+	if (user.password !== password) {
+		return res.status(401).json({
+			msg: loginMessages.failed
+		})
+	}
+
+	const { JWT_SECRET } = app.settings
+	const payload = {
+		name: user.name
+	}
+	const options = { } // registered 정보
+
+	/**
+	 * JWT 토큰을 생성해서 반환한다
+	 */
+	jwt.sign(payload, JWT_SECRET, options, (err, token) => {
+		return res.status(201).json({
+			token,
+			msg: loginMessages.success
+		})
+	})
 })
 
 /**
  * 회원가입
  */
-app.post('/', (req, res, next) => {
+const registerMessages = {
+	registed: '이미 등록되어 있습니다.',
+	success: 'success'
+}
+app.post('/', (req, res) => {
+	const { id, password, name }: Partial<IUser> = req.body
 
+	if (id === undefined || password === undefined || name === undefined) {
+		return res.status(404)
+	}
+
+	if (registryUsers.get(id)) {
+		return res.status(200).json({
+			msg: registerMessages.registed
+		})
+	}
+
+	/**
+	 * 유저정보 저장
+	 */
+	registryUsers.set(id, {
+		id, password, name
+	})
+
+	return res.status(201).json({
+		msg: registerMessages.success,
+	})
 })
 
 /**
