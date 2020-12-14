@@ -1,0 +1,35 @@
+### 회원가입
+POST {{host}}
+Content-Type: application/json
+
+{
+  "id": "{{id}}",
+  "name": "{{name}}",
+  "password": "{{password}}"
+}
+
+> {%
+client.test("Request executed successfully", function () {
+  client.assert(response.status === 201, "Response status is not 201");
+});
+%}
+
+### 로그인
+GET {{host}}?id={{id}}&password={{password}}
+
+> {%
+client.test("Request executed successfully", function () {
+  client.global.set('token', response.body.token)
+  client.assert(response.status === 201, "Response status is not 200");
+});
+%}
+
+### api 요청
+GET {{host}}/api
+token: {{token}}
+
+> {%
+client.test("Request executed successfully", function () {
+  client.assert(response.status === 200, "Response status is not 200");
+});
+%}
